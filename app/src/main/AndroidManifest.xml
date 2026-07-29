@@ -9,7 +9,6 @@
         android:label="@string/app_name"
         android:theme="@style/Theme.MyanmarKeyboard">
 
-        <!-- Settings / launcher activity -->
         <activity
             android:name=".SettingsActivity"
             android:exported="true">
@@ -19,7 +18,11 @@
             </intent-filter>
         </activity>
 
-        <!-- The Input Method Service itself -->
+        <activity
+            android:name=".VoiceInputActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:exported="false" />
+
         <service
             android:name=".MyanmarKeyboardService"
             android:label="@string/app_name"
