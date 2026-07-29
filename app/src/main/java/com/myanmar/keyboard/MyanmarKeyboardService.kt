@@ -1,5 +1,6 @@
 package com.myanmar.keyboard
 
+import android.content.Intent
 import android.inputmethodservice.InputMethodService
 import android.view.LayoutInflater
 import android.view.View
@@ -10,11 +11,25 @@ import androidx.core.content.ContextCompat
 
 class MyanmarKeyboardService : InputMethodService() {
 
+    companion object {
+        var instance: MyanmarKeyboardService? = null
+    }
+
     private enum class Mode { LETTERS, NUMBERS, SYMBOLS }
 
     private lateinit var rowsContainer: LinearLayout
     private var mode = Mode.LETTERS
     private var isShift = false
+
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+    }
+
+    override fun onDestroy() {
+        instance = null
+        super.onDestroy()
+    }
 
     override fun onCreateInputView(): View {
         val keyboardView = LayoutInflater.from(this)
@@ -24,7 +39,10 @@ class MyanmarKeyboardService : InputMethodService() {
         return keyboardView
     }
 
-    /** Rebuilds all rows for the current [mode] / [isShift] state. */
+    fun commitVoiceText(text: String) {
+        currentInputConnection?.commitText(text, 1)
+    }
+
     private fun buildKeyboard() {
         rowsContainer.removeAllViews()
 
@@ -70,12 +88,15 @@ class MyanmarKeyboardService : InputMethodService() {
 
     private fun backspaceKey() = KeyModel("⌫", action = KeyAction.BACKSPACE, flexWeight = 1.5f)
 
+    private fun micKey() = KeyModel("🎤", action = KeyAction.VOICE, flexWeight = 1.2f)
+
     private fun bottomRow(switchLabel: String, switchAction: KeyAction) = listOf(
-        KeyModel(switchLabel, action = switchAction, flexWeight = 1.5f),
-        KeyModel(",", flexWeight = 1f),
-        KeyModel("space", output = " ", action = KeyAction.SPACE, flexWeight = 4f),
-        KeyModel(".", flexWeight = 1f),
-        KeyModel("Enter", action = KeyAction.ENTER, flexWeight = 1.5f)
+        KeyModel(switchLabel, action = switchAction, flexWeight = 1.3f),
+        micKey(),
+        KeyModel(",", flexWeight = 0.9f),
+        KeyModel("space", output = " ", action = KeyAction.SPACE, flexWeight = 3.2f),
+        KeyModel(".", flexWeight = 0.9f),
+        KeyModel("Enter", action = KeyAction.ENTER, flexWeight = 1.3f)
     )
 
     private fun addRow(keys: List<KeyModel>) {
@@ -136,10 +157,14 @@ class MyanmarKeyboardService : InputMethodService() {
                 mode = Mode.LETTERS
                 buildKeyboard()
             }
+            KeyAction.VOICE -> {
+                val intent = Intent(this, VoiceInputActivity::class.java)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(intent)
+            }
             KeyAction.NONE -> {
                 ic.commitText(key.output, 1)
                 if (isShift) {
-                    // Standard mobile behaviour: shift reverts after one letter.
                     isShift = false
                     buildKeyboard()
                 }
