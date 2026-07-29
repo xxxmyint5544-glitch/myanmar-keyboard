@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">မြန်မာကီးဘုတ်</string>
+    <string name="setup_instructions">၁။ Enable Keyboard ကိုနှိပ်ပြီး ဒီ Keyboard ကို On ဖွင့်ပါ။
+၂။ Switch Keyboard ကိုနှိပ်ပြီး မြန်မာကီးဘုတ်ကို ရွေးချယ်ပါ။</string>
+    <string name="btn_enable_keyboard">Enable Keyboard (Settings ဖွင့်ရန်)</string>
+    <string name="btn_switch_keyboard">Switch to Myanmar Keyboard</string>
+</resources>
