@@ -52,6 +52,7 @@ class MyanmarKeyboardService : InputMethodService() {
                 val row2 = if (isShift) MyanmarLayout.lettersRow3Shift else MyanmarLayout.lettersRow3
                 val row3Letters = if (isShift) MyanmarLayout.lettersRow4Shift else MyanmarLayout.lettersRow4
 
+                addRow(MyanmarLayout.numbersRow1)
                 addRow(row1)
                 addRow(row2)
                 addRow(
