@@ -1,13 +1,7 @@
 package com.myanmar.keyboard
 
-import android.content.Intent
 import android.inputmethodservice.InputMethodService
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
-import android.widget.Button
-import android.widget.LinearLayout
-import androidx.core.content.ContextCompat
 
 class MyanmarKeyboardService : InputMethodService() {
 
@@ -15,8 +9,6 @@ class MyanmarKeyboardService : InputMethodService() {
         var instance: MyanmarKeyboardService? = null
             private set
     }
-
-    private var isShift = false
 
     override fun onCreate() {
         super.onCreate()
@@ -29,18 +21,15 @@ class MyanmarKeyboardService : InputMethodService() {
     }
 
     override fun onCreateInputView(): View {
-        // Gboard ပုံစံတူ အမိုက်စား အမှောင်ရောင် Layout ကို ချိတ်ဆက်ခြင်း
-        val keyboardView = layoutInflater.inflate(R.layout.keyboard_view, null)
-        return keyboardView
+        // အခြေခံ ကီးဘုတ် Layout ကို ချိတ်ဆက်ခြင်း
+        return layoutInflater.inflate(R.layout.keyboard_view, null)
     }
 
     fun commitText(text: String) {
-        val currentConnection = currentInputConnection
-        currentConnection?.commitText(text, 1)
+        currentInputConnection?.commitText(text, 1)
     }
 
     fun deleteSurroundingText() {
-        val currentConnection = currentInputConnection
-        currentConnection?.deleteSurroundingText(1, 0)
+        currentInputConnection?.deleteSurroundingText(1, 0)
     }
 }
