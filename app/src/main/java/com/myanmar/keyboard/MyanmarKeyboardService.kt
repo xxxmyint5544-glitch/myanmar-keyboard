@@ -1,7 +1,13 @@
 package com.myanmar.keyboard
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.inputmethodservice.InputMethodService
+import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,6 +28,8 @@ class MyanmarKeyboardService : InputMethodService() {
     private lateinit var rowsContainer: LinearLayout
     private var mode = Mode.LETTERS
     private var isShift = false
+    private var speechRecognizer: SpeechRecognizer? = null
+    private var isListening = false
 
     override fun onCreate() {
         super.onCreate()
@@ -29,6 +37,7 @@ class MyanmarKeyboardService : InputMethodService() {
     }
 
     override fun onDestroy() {
+        stopVoiceListening()
         instance = null
         super.onDestroy()
     }
@@ -41,12 +50,22 @@ class MyanmarKeyboardService : InputMethodService() {
         return keyboardView
     }
 
-    fun commitVoiceText(text: String) {
-        currentInputConnection?.commitText(text, 1)
+    override fun onFinishInputView(finishingInput: Boolean) {
+        super.onFinishInputView(finishingInput)
+        stopVoiceListening()
     }
 
     private fun buildKeyboard() {
         rowsContainer.removeAllViews()
+
+        if (isListening) {
+            addRow(listOf(KeyModel(
+                "🎤 နားထောင်နေသည်... (${languageLabel(voiceLanguage)}) — ရပ်ရန်နှိပ်ပါ",
+                action = KeyAction.VOICE,
+                flexWeight = 1f
+            )))
+            return
+        }
 
         when (mode) {
             Mode.LETTERS -> {
@@ -83,11 +102,14 @@ class MyanmarKeyboardService : InputMethodService() {
         }
     }
 
-    private fun shiftKey() = KeyModel(
-        label = if (isShift) "⇧" else "⇧",
-        action = KeyAction.SHIFT,
-        flexWeight = 1.5f
-    )
+    private fun languageLabel(code: String) = when (code) {
+        "my-MM" -> "မြန်မာ"
+        "en-US" -> "English"
+        "th-TH" -> "ไทย"
+        else -> code
+    }
+
+    private fun shiftKey() = KeyModel(label = "⇧", action = KeyAction.SHIFT, flexWeight = 1.5f)
 
     private fun backspaceKey() = KeyModel("⌫", action = KeyAction.BACKSPACE, flexWeight = 1.5f)
 
@@ -119,7 +141,7 @@ class MyanmarKeyboardService : InputMethodService() {
         return Button(this).apply {
             text = key.label
             isAllCaps = false
-            textSize = 18f
+            textSize = if (isListening) 14f else 18f
             setTextColor(ContextCompat.getColor(context, R.color.key_text))
             background = ContextCompat.getDrawable(
                 context,
@@ -134,7 +156,7 @@ class MyanmarKeyboardService : InputMethodService() {
                 height = (56 * resources.displayMetrics.density).toInt()
             }
             setOnClickListener { onKey(key) }
-            if (key.action == KeyAction.VOICE) {
+            if (key.action == KeyAction.VOICE && !isListening) {
                 setOnLongClickListener {
                     cycleVoiceLanguage()
                     true
@@ -149,25 +171,20 @@ class MyanmarKeyboardService : InputMethodService() {
             "en-US" -> "th-TH"
             else -> "my-MM"
         }
-        val label = when (voiceLanguage) {
-            "my-MM" -> "မြန်မာ အသံဖမ်းစနစ်"
-            "en-US" -> "English voice"
-            else -> "ภาษาไทย"
-        }
-        Toast.makeText(this, label, Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, languageLabel(voiceLanguage), Toast.LENGTH_SHORT).show()
     }
 
     private fun onKey(key: KeyModel) {
-        val ic = currentInputConnection ?: return
+        val ic = currentInputConnection
 
         when (key.action) {
-            KeyAction.BACKSPACE -> ic.deleteSurroundingText(1, 0)
+            KeyAction.BACKSPACE -> ic?.deleteSurroundingText(1, 0)
             KeyAction.SHIFT -> {
                 isShift = !isShift
                 buildKeyboard()
             }
-            KeyAction.SPACE -> ic.commitText(" ", 1)
-            KeyAction.ENTER -> ic.commitText("\n", 1)
+            KeyAction.SPACE -> ic?.commitText(" ", 1)
+            KeyAction.ENTER -> ic?.commitText("\n", 1)
             KeyAction.SWITCH_TO_NUMBERS -> {
                 mode = Mode.NUMBERS
                 buildKeyboard()
@@ -181,17 +198,91 @@ class MyanmarKeyboardService : InputMethodService() {
                 buildKeyboard()
             }
             KeyAction.VOICE -> {
-                val intent = Intent(this, VoiceInputActivity::class.java)
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                startActivity(intent)
+                if (isListening) stopVoiceListening() else toggleVoiceListening()
             }
             KeyAction.NONE -> {
-                ic.commitText(key.output, 1)
+                ic?.commitText(key.output, 1)
                 if (isShift) {
                     isShift = false
                     buildKeyboard()
                 }
             }
         }
+    }
+
+    private fun toggleVoiceListening() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            Toast.makeText(
+                this,
+                "App ကိုဖွင့်ပြီး \"Enable Voice Typing\" ကိုနှိပ်ပါ",
+                Toast.LENGTH_LONG
+            ).show()
+            val intent = Intent(this, SettingsActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+            return
+        }
+        startVoiceListening()
+    }
+
+    private fun startVoiceListening() {
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            Toast.makeText(this, "ဤစက်ပေါ်တွင် အသံဖြင့်စာရိုက်ခြင်း မရနိုင်ပါ", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        isListening = true
+        buildKeyboard()
+
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
+            setRecognitionListener(object : RecognitionListener {
+                override fun onReadyForSpeech(params: Bundle?) {}
+                override fun onBeginningOfSpeech() {}
+                override fun onRmsChanged(rmsdB: Float) {}
+                override fun onBufferReceived(buffer: ByteArray?) {}
+                override fun onEndOfSpeech() {}
+
+                override fun onError(error: Int) {
+                    when (error) {
+                        SpeechRecognizer.ERROR_NO_MATCH,
+                        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> {
+                            if (isListening) launchRecognition()
+                        }
+                        else -> stopVoiceListening()
+                    }
+                }
+
+                override fun onResults(results: Bundle?) {
+                    val text = results
+                        ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        ?.firstOrNull()
+                    if (!text.isNullOrEmpty()) {
+                        currentInputConnection?.commitText("$text ", 1)
+                    }
+                    if (isListening) launchRecognition()
+                }
+
+                override fun onPartialResults(partialResults: Bundle?) {}
+                override fun onEvent(eventType: Int, params: Bundle?) {}
+            })
+        }
+        launchRecognition()
+    }
+
+    private fun launchRecognition() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, voiceLanguage)
+        }
+        speechRecognizer?.startListening(intent)
+    }
+
+    private fun stopVoiceListening() {
+        isListening = false
+        speechRecognizer?.destroy()
+        speechRecognizer = null
+        buildKeyboard()
     }
 }
