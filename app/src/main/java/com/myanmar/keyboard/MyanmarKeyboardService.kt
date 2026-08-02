@@ -7,12 +7,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 
 class MyanmarKeyboardService : InputMethodService() {
 
     companion object {
         var instance: MyanmarKeyboardService? = null
+        var voiceLanguage: String = "my-MM"
     }
 
     private enum class Mode { LETTERS, NUMBERS, SYMBOLS }
@@ -132,7 +134,27 @@ class MyanmarKeyboardService : InputMethodService() {
                 height = (56 * resources.displayMetrics.density).toInt()
             }
             setOnClickListener { onKey(key) }
+            if (key.action == KeyAction.VOICE) {
+                setOnLongClickListener {
+                    cycleVoiceLanguage()
+                    true
+                }
+            }
         }
+    }
+
+    private fun cycleVoiceLanguage() {
+        voiceLanguage = when (voiceLanguage) {
+            "my-MM" -> "en-US"
+            "en-US" -> "th-TH"
+            else -> "my-MM"
+        }
+        val label = when (voiceLanguage) {
+            "my-MM" -> "မြန်မာ အသံဖမ်းစနစ်"
+            "en-US" -> "English voice"
+            else -> "ภาษาไทย"
+        }
+        Toast.makeText(this, label, Toast.LENGTH_SHORT).show()
     }
 
     private fun onKey(key: KeyModel) {
