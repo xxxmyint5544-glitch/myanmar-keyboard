@@ -205,13 +205,27 @@ class MyanmarKeyboardService : InputMethodService() {
                 if (isListening) stopVoiceListening() else toggleVoiceListening()
             }
             KeyAction.NONE -> {
-                ic?.commitText(key.output, 1)
+                commitLetter(ic, key.output)
                 if (isShift) {
                     isShift = false
                     buildKeyboard()
                 }
             }
         }
+    }
+
+    private fun commitLetter(ic: android.view.inputmethod.InputConnection?, output: String) {
+        if (ic == null) return
+        if (output == "ေ") {
+            val before = ic.getTextBeforeCursor(1, 0)
+            val prevChar = before?.firstOrNull()
+            if (prevChar != null && prevChar.code in 0x1000..0x1021) {
+                ic.deleteSurroundingText(1, 0)
+                ic.commitText("ေ$prevChar", 1)
+                return
+            }
+        }
+        ic.commitText(output, 1)
     }
 
     private fun toggleVoiceListening() {
