@@ -30,6 +30,7 @@ class MyanmarKeyboardService : InputMethodService() {
     private var isShift = false
     private var speechRecognizer: SpeechRecognizer? = null
     private var isListening = false
+    private var lastConsonant: Char? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -182,13 +183,22 @@ class MyanmarKeyboardService : InputMethodService() {
         val ic = currentInputConnection
 
         when (key.action) {
-            KeyAction.BACKSPACE -> ic?.deleteSurroundingText(1, 0)
+            KeyAction.BACKSPACE -> {
+                ic?.deleteSurroundingText(1, 0)
+                lastConsonant = null
+            }
             KeyAction.SHIFT -> {
                 isShift = !isShift
                 buildKeyboard()
             }
-            KeyAction.SPACE -> ic?.commitText(" ", 1)
-            KeyAction.ENTER -> ic?.commitText("\n", 1)
+            KeyAction.SPACE -> {
+                ic?.commitText(" ", 1)
+                lastConsonant = null
+            }
+            KeyAction.ENTER -> {
+                ic?.commitText("\n", 1)
+                lastConsonant = null
+            }
             KeyAction.SWITCH_TO_NUMBERS -> {
                 mode = Mode.NUMBERS
                 buildKeyboard()
@@ -216,16 +226,18 @@ class MyanmarKeyboardService : InputMethodService() {
 
     private fun commitLetter(ic: android.view.inputmethod.InputConnection?, output: String) {
         if (ic == null) return
-        if (output == "ေ") {
-            val before = ic.getTextBeforeCursor(1, 0)
-            val prevChar = before?.firstOrNull()
-            if (prevChar != null && prevChar.code in 0x1000..0x1021) {
-                ic.deleteSurroundingText(1, 0)
-                ic.commitText("ေ$prevChar", 1)
-                return
-            }
+        if (output == "ေ" && lastConsonant != null) {
+            ic.deleteSurroundingText(1, 0)
+            ic.commitText("ေ$lastConsonant", 1)
+            lastConsonant = null
+            return
         }
         ic.commitText(output, 1)
+        lastConsonant = if (output.length == 1 && output[0].code in 0x1000..0x1021) {
+            output[0]
+        } else {
+            null
+        }
     }
 
     private fun toggleVoiceListening() {
