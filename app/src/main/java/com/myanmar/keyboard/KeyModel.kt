@@ -16,5 +16,6 @@ enum class KeyAction {
     SWITCH_TO_NUMBERS,
     SWITCH_TO_SYMBOLS,
     SWITCH_TO_LETTERS,
+    SWITCH_LANGUAGE,
     VOICE
 }
