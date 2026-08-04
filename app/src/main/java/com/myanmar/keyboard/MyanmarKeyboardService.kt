@@ -31,6 +31,7 @@ class MyanmarKeyboardService : InputMethodService() {
     private var speechRecognizer: SpeechRecognizer? = null
     private var isListening = false
     private var lastConsonant: Char? = null
+    private var isEnglish = false
 
     override fun onCreate() {
         super.onCreate()
@@ -74,16 +75,25 @@ class MyanmarKeyboardService : InputMethodService() {
 
         when (mode) {
             Mode.LETTERS -> {
-                val row1 = if (isShift) MyanmarLayout.lettersRow2Shift else MyanmarLayout.lettersRow2
-                val row2 = if (isShift) MyanmarLayout.lettersRow3Shift else MyanmarLayout.lettersRow3
-                val row3Letters = if (isShift) MyanmarLayout.lettersRow4Shift else MyanmarLayout.lettersRow4
+                addRow(if (isShift) MyanmarLayout.lettersRow1Shift else MyanmarLayout.numbersRow1)
 
-                addRow(MyanmarLayout.numbersRow1)
-                addRow(row1)
-                addRow(row2)
-                addRow(
-                    listOf(shiftKey()) + row3Letters + listOf(backspaceKey())
-                )
+                if (isEnglish) {
+                    addRow(caseRow(MyanmarLayout.englishRow1))
+                    addRow(caseRow(MyanmarLayout.englishRow2))
+                    addRow(
+                        listOf(shiftKey()) + caseRow(MyanmarLayout.englishRow3) + listOf(backspaceKey())
+                    )
+                } else {
+                    val row2 = if (isShift) MyanmarLayout.lettersRow2Shift else MyanmarLayout.lettersRow2
+                    val row3 = if (isShift) MyanmarLayout.lettersRow3Shift else MyanmarLayout.lettersRow3
+                    val row4 = if (isShift) MyanmarLayout.lettersRow4Shift else MyanmarLayout.lettersRow4
+
+                    addRow(row2)
+                    addRow(row3)
+                    addRow(
+                        listOf(shiftKey()) + row4 + listOf(backspaceKey())
+                    )
+                }
                 addRow(bottomRow(switchLabel = "123", switchAction = KeyAction.SWITCH_TO_NUMBERS))
             }
             Mode.NUMBERS -> {
@@ -116,18 +126,31 @@ class MyanmarKeyboardService : InputMethodService() {
 
     private fun shiftKey() = KeyModel(label = "⇧", action = KeyAction.SHIFT, flexWeight = 1.5f)
 
+    private fun caseRow(row: List<KeyModel>): List<KeyModel> =
+        if (isShift) row.map { it.copy(label = it.label.uppercase(), output = it.output.uppercase()) } else row
+
+    private fun langKey() = KeyModel(
+        label = if (isEnglish) "MM" else "EN",
+        action = KeyAction.SWITCH_LANGUAGE,
+        flexWeight = 1f
+    )
+
     private fun backspaceKey() = KeyModel("⌫", action = KeyAction.BACKSPACE, flexWeight = 1.5f)
 
     private fun micKey() = KeyModel("🎤", action = KeyAction.VOICE, flexWeight = 1.2f)
 
-    private fun bottomRow(switchLabel: String, switchAction: KeyAction) = listOf(
-        KeyModel(switchLabel, action = switchAction, flexWeight = 1.3f),
-        micKey(),
-        KeyModel(",", flexWeight = 0.9f),
-        KeyModel("space", output = " ", action = KeyAction.SPACE, flexWeight = 3.2f),
-        KeyModel(".", flexWeight = 0.9f),
-        KeyModel("Enter", action = KeyAction.ENTER, flexWeight = 1.3f)
-    )
+    private fun bottomRow(switchLabel: String, switchAction: KeyAction): List<KeyModel> {
+        val keys = mutableListOf(
+            KeyModel(switchLabel, action = switchAction, flexWeight = 1.1f),
+            micKey()
+        )
+        if (mode == Mode.LETTERS) keys.add(langKey())
+        keys.add(KeyModel(",", flexWeight = 0.8f))
+        keys.add(KeyModel("space", output = " ", action = KeyAction.SPACE, flexWeight = 2.6f))
+        keys.add(KeyModel(".", flexWeight = 0.8f))
+        keys.add(KeyModel("Enter", action = KeyAction.ENTER, flexWeight = 1.1f))
+        return keys
+    }
 
     private fun addRow(keys: List<KeyModel>) {
         val row = LinearLayout(this).apply {
@@ -213,6 +236,11 @@ class MyanmarKeyboardService : InputMethodService() {
             }
             KeyAction.VOICE -> {
                 if (isListening) stopVoiceListening() else toggleVoiceListening()
+            }
+            KeyAction.SWITCH_LANGUAGE -> {
+                isEnglish = !isEnglish
+                lastConsonant = null
+                buildKeyboard()
             }
             KeyAction.NONE -> {
                 commitLetter(ic, key.output)
