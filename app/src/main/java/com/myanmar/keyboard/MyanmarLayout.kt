@@ -85,4 +85,15 @@ object MyanmarLayout {
         KeyModel("z"), KeyModel("x"), KeyModel("c"), KeyModel("v"),
         KeyModel("b"), KeyModel("n"), KeyModel("m")
     )
+
+    // ---------- Emoji ----------
+    val emojiRow1 = listOf(
+        "😀", "😁", "😂", "🤣", "😊", "😍", "😘", "😜", "🤔", "😎"
+    ).map { KeyModel(it) }
+    val emojiRow2 = listOf(
+        "👍", "👎", "👏", "🙏", "💪", "❤️", "🔥", "🎉", "✅", "❌"
+    ).map { KeyModel(it) }
+    val emojiRow3 = listOf(
+        "😢", "😭", "😡", "😴", "🥰", "😅", "🙄", "😇", "🤗", "👋"
+    ).map { KeyModel(it) }
 }
