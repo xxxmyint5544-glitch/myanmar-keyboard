@@ -23,7 +23,7 @@ class MyanmarKeyboardService : InputMethodService() {
         var voiceLanguage: String = "my-MM"
     }
 
-    private enum class Mode { LETTERS, NUMBERS, SYMBOLS }
+    private enum class Mode { LETTERS, NUMBERS, SYMBOLS, EMOJI }
 
     private lateinit var rowsContainer: LinearLayout
     private var mode = Mode.LETTERS
@@ -114,6 +114,18 @@ class MyanmarKeyboardService : InputMethodService() {
                 )
                 addRow(bottomRow(switchLabel = "ABC", switchAction = KeyAction.SWITCH_TO_LETTERS))
             }
+            Mode.EMOJI -> {
+                addRow(MyanmarLayout.emojiRow1)
+                addRow(MyanmarLayout.emojiRow2)
+                addRow(MyanmarLayout.emojiRow3)
+                addRow(
+                    listOf(
+                        KeyModel("ABC", action = KeyAction.SWITCH_TO_LETTERS, flexWeight = 1.5f),
+                        KeyModel("space", output = " ", action = KeyAction.SPACE, flexWeight = 3f),
+                        backspaceKey()
+                    )
+                )
+            }
         }
     }
 
@@ -132,23 +144,32 @@ class MyanmarKeyboardService : InputMethodService() {
     private fun langKey() = KeyModel(
         label = if (isEnglish) "MM" else "EN",
         action = KeyAction.SWITCH_LANGUAGE,
-        flexWeight = 1f
+        flexWeight = 0.8f
+    )
+
+    private fun emojiKey() = KeyModel(
+        label = "😊",
+        action = KeyAction.SWITCH_TO_EMOJI,
+        flexWeight = 0.8f
     )
 
     private fun backspaceKey() = KeyModel("⌫", action = KeyAction.BACKSPACE, flexWeight = 1.5f)
 
-    private fun micKey() = KeyModel("🎤", action = KeyAction.VOICE, flexWeight = 1.2f)
+    private fun micKey() = KeyModel("🎤", action = KeyAction.VOICE, flexWeight = 1f)
 
     private fun bottomRow(switchLabel: String, switchAction: KeyAction): List<KeyModel> {
         val keys = mutableListOf(
-            KeyModel(switchLabel, action = switchAction, flexWeight = 1.1f),
+            KeyModel(switchLabel, action = switchAction, flexWeight = 1f),
             micKey()
         )
-        if (mode == Mode.LETTERS) keys.add(langKey())
-        keys.add(KeyModel(",", flexWeight = 0.8f))
-        keys.add(KeyModel("space", output = " ", action = KeyAction.SPACE, flexWeight = 2.6f))
-        keys.add(KeyModel(".", flexWeight = 0.8f))
-        keys.add(KeyModel("Enter", action = KeyAction.ENTER, flexWeight = 1.1f))
+        if (mode == Mode.LETTERS) {
+            keys.add(langKey())
+            keys.add(emojiKey())
+        }
+        keys.add(KeyModel(",", flexWeight = 0.6f))
+        keys.add(KeyModel("space", output = " ", action = KeyAction.SPACE, flexWeight = 2f))
+        keys.add(KeyModel(".", flexWeight = 0.6f))
+        keys.add(KeyModel("Enter", action = KeyAction.ENTER, flexWeight = 1f))
         return keys
     }
 
@@ -232,6 +253,10 @@ class MyanmarKeyboardService : InputMethodService() {
             }
             KeyAction.SWITCH_TO_LETTERS -> {
                 mode = Mode.LETTERS
+                buildKeyboard()
+            }
+            KeyAction.SWITCH_TO_EMOJI -> {
+                mode = Mode.EMOJI
                 buildKeyboard()
             }
             KeyAction.VOICE -> {
