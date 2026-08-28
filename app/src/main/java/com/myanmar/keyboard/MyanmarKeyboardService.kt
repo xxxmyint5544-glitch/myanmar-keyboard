@@ -268,28 +268,12 @@ class MyanmarKeyboardService : InputMethodService() {
                 buildKeyboard()
             }
             KeyAction.NONE -> {
-                commitLetter(ic, key.output)
+                ic?.commitText(key.output, 1)
                 if (isShift) {
                     isShift = false
                     buildKeyboard()
                 }
             }
-        }
-    }
-
-    private fun commitLetter(ic: android.view.inputmethod.InputConnection?, output: String) {
-        if (ic == null) return
-        if (output == "ေ" && lastConsonant != null) {
-            ic.deleteSurroundingText(1, 0)
-            ic.commitText("ေ$lastConsonant", 1)
-            lastConsonant = null
-            return
-        }
-        ic.commitText(output, 1)
-        lastConsonant = if (output.length == 1 && output[0].code in 0x1000..0x1021) {
-            output[0]
-        } else {
-            null
         }
     }
 
