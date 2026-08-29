@@ -85,6 +85,10 @@ object MyanmarLayout {
         KeyModel("z"), KeyModel("x"), KeyModel("c"), KeyModel("v"),
         KeyModel("b"), KeyModel("n"), KeyModel("m")
     )
+    val englishNumbersRow1 = listOf(
+        KeyModel("1"), KeyModel("2"), KeyModel("3"), KeyModel("4"), KeyModel("5"),
+        KeyModel("6"), KeyModel("7"), KeyModel("8"), KeyModel("9"), KeyModel("0")
+    )
 
     // ---------- Emoji ----------
     val emojiRow1 = listOf(
