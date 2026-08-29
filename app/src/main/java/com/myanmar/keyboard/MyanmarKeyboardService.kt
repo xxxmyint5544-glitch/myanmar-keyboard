@@ -30,7 +30,6 @@ class MyanmarKeyboardService : InputMethodService() {
     private var isShift = false
     private var speechRecognizer: SpeechRecognizer? = null
     private var isListening = false
-    private var lastConsonant: Char? = null
     private var isEnglish = false
 
     override fun onCreate() {
@@ -75,7 +74,12 @@ class MyanmarKeyboardService : InputMethodService() {
 
         when (mode) {
             Mode.LETTERS -> {
-                addRow(if (isShift) MyanmarLayout.lettersRow1Shift else MyanmarLayout.numbersRow1)
+                val topRow = when {
+                    isShift -> MyanmarLayout.lettersRow1Shift
+                    isEnglish -> MyanmarLayout.englishNumbersRow1
+                    else -> MyanmarLayout.numbersRow1
+                }
+                addRow(topRow)
 
                 if (isEnglish) {
                     addRow(caseRow(MyanmarLayout.englishRow1))
@@ -97,7 +101,7 @@ class MyanmarKeyboardService : InputMethodService() {
                 addRow(bottomRow(switchLabel = "123", switchAction = KeyAction.SWITCH_TO_NUMBERS))
             }
             Mode.NUMBERS -> {
-                addRow(MyanmarLayout.numbersRow1)
+                addRow(if (isEnglish) MyanmarLayout.englishNumbersRow1 else MyanmarLayout.numbersRow1)
                 addRow(MyanmarLayout.numbersRow2)
                 addRow(
                     listOf(KeyModel("#+=", action = KeyAction.SWITCH_TO_SYMBOLS, flexWeight = 1.5f)) +
@@ -227,22 +231,13 @@ class MyanmarKeyboardService : InputMethodService() {
         val ic = currentInputConnection
 
         when (key.action) {
-            KeyAction.BACKSPACE -> {
-                ic?.deleteSurroundingText(1, 0)
-                lastConsonant = null
-            }
+            KeyAction.BACKSPACE -> ic?.deleteSurroundingText(1, 0)
             KeyAction.SHIFT -> {
                 isShift = !isShift
                 buildKeyboard()
             }
-            KeyAction.SPACE -> {
-                ic?.commitText(" ", 1)
-                lastConsonant = null
-            }
-            KeyAction.ENTER -> {
-                ic?.commitText("\n", 1)
-                lastConsonant = null
-            }
+            KeyAction.SPACE -> ic?.commitText(" ", 1)
+            KeyAction.ENTER -> ic?.commitText("\n", 1)
             KeyAction.SWITCH_TO_NUMBERS -> {
                 mode = Mode.NUMBERS
                 buildKeyboard()
@@ -264,7 +259,6 @@ class MyanmarKeyboardService : InputMethodService() {
             }
             KeyAction.SWITCH_LANGUAGE -> {
                 isEnglish = !isEnglish
-                lastConsonant = null
                 buildKeyboard()
             }
             KeyAction.NONE -> {
